@@ -5,81 +5,100 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Web WA</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5; margin: 0; }
-        .login-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); text-align: center; width: 100%; max-width: 350px; }
-        h2 { color: #075e54; margin-top: 0; margin-bottom: 25px; }
-        input { padding: 12px; width: calc(100% - 26px); margin-bottom: 20px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; text-align: center;}
-        input:focus { outline: none; border-color: #25D366; box-shadow: 0 0 5px rgba(37, 211, 102, 0.5); }
-        button { padding: 12px 20px; background-color: #25D366; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; transition: 0.3s; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, #075e54, #25D366); margin: 0; padding: 20px; }
+        .auth-card { background: white; padding: 34px; border-radius: 18px; box-shadow: 0 18px 45px rgba(0,0,0,0.18); width: 100%; max-width: 420px; }
+        h1 { color: #075e54; margin: 0 0 10px; text-align: center; }
+        p { color: #667085; text-align: center; margin: 0 0 24px; }
+        label { display: block; color: #344054; font-weight: 700; margin-bottom: 8px; }
+        input { width: 100%; padding: 13px 14px; margin-bottom: 16px; border: 1px solid #d0d5dd; border-radius: 10px; font-size: 15px; }
+        input:focus { outline: none; border-color: #25D366; box-shadow: 0 0 0 4px rgba(37, 211, 102, 0.15); }
+        button { width: 100%; padding: 13px 16px; background-color: #25D366; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 800; transition: 0.2s; }
         button:hover { background-color: #1ebe5d; }
-        #msg { color: #dc3545; font-size: 14px; margin-top: 15px; font-weight: bold; min-height: 20px;}
+        button:disabled { opacity: .7; cursor: not-allowed; }
+        .links { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; font-size: 14px; }
+        a { color: #075e54; font-weight: 700; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        #msg { color: #dc3545; font-size: 14px; margin-top: 15px; font-weight: bold; min-height: 20px; text-align: center; }
+        .hint { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 12px; border-radius: 10px; margin-bottom: 18px; font-size: 13px; text-align: left; }
     </style>
 </head>
 <body>
-    <div class="login-box">
-        <h2>Akses Web WA</h2>
-        <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Masukkan Access Key Anda untuk melanjutkan.</p>
-        
-        <input type="text" id="accessKey" placeholder="KEY KAMU">
-        
+    <main class="auth-card">
+        <h1>Masuk Web WA</h1>
+        <p>Login memakai username dan password. Nomor WhatsApp diisi manual setelah masuk dashboard.</p>
+        <div class="hint">Admin bawaan: <strong>admin</strong> / <strong>admin123</strong>. Segera ubah data pada JSON saat produksi.</div>
+
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="contoh: fandirr" autocomplete="username">
+
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Minimal 6 karakter" autocomplete="current-password">
+
         <button id="btnLogin" onclick="login()">Masuk ke Dashboard</button>
         <p id="msg"></p>
-    </div>
+
+        <div class="links">
+            <a href="/register.html">Buat akun free</a>
+            <a href="/admin.html">Halaman admin</a>
+        </div>
+    </main>
 
     <script>
-        // Hapus sesi lama jika user balik ke halaman login
         sessionStorage.clear();
 
         async function login() {
-            const key = document.getElementById('accessKey').value;
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
             const btn = document.getElementById('btnLogin');
             const msgBox = document.getElementById('msg');
-            
-            if (!key) {
-                msgBox.innerText = "Key tidak boleh kosong!";
+
+            if (!username || !password) {
+                msgBox.style.color = '#dc3545';
+                msgBox.innerText = 'Username dan password wajib diisi!';
                 return;
             }
 
-            btn.innerText = "Memeriksa...";
+            btn.innerText = 'Memeriksa...';
             btn.disabled = true;
 
             try {
                 const res = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key })
+                    body: JSON.stringify({ username, password })
                 });
                 const data = await res.json();
-                
+
                 if (data.success) {
-                    // PENTING: Simpan Key dan Nomor HP (phone) ke memori browser
-                    sessionStorage.setItem('auth_key', key);
-                    sessionStorage.setItem('user_phone', data.phone); 
-                    
-                    msgBox.style.color = "#28a745";
-                    msgBox.innerText = "Berhasil! Mengalihkan...";
-                    
+                    sessionStorage.setItem('auth_key', data.authKey);
+                    sessionStorage.setItem('user', JSON.stringify(data.user));
+                    sessionStorage.setItem('limits', JSON.stringify(data.limits || {}));
+
+                    msgBox.style.color = '#28a745';
+                    msgBox.innerText = 'Berhasil! Mengalihkan...';
+
                     setTimeout(() => {
-                        window.location.href = '/dashboard.html';
+                        window.location.href = data.user.role === 'admin' ? '/admin.html' : '/dashboard.html';
                     }, 500);
                 } else {
-                    msgBox.style.color = "#dc3545";
+                    msgBox.style.color = '#dc3545';
                     msgBox.innerText = data.message;
-                    btn.innerText = "Masuk ke Dashboard";
+                    btn.innerText = 'Masuk ke Dashboard';
                     btn.disabled = false;
                 }
             } catch (err) {
-                msgBox.innerText = "Terjadi kesalahan server.";
-                btn.innerText = "Masuk ke Dashboard";
+                msgBox.style.color = '#dc3545';
+                msgBox.innerText = 'Terjadi kesalahan server.';
+                btn.innerText = 'Masuk ke Dashboard';
                 btn.disabled = false;
             }
         }
 
-        // Fitur tekan Enter untuk login
-        document.getElementById('accessKey').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                login();
-            }
+        ['username', 'password'].forEach((id) => {
+            document.getElementById(id).addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') login();
+            });
         });
     </script>
 </body>
