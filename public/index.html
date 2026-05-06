@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Web WA</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5; margin: 0; }
+        .login-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); text-align: center; width: 100%; max-width: 350px; }
+        h2 { color: #075e54; margin-top: 0; margin-bottom: 25px; }
+        input { padding: 12px; width: calc(100% - 26px); margin-bottom: 20px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; text-align: center;}
+        input:focus { outline: none; border-color: #25D366; box-shadow: 0 0 5px rgba(37, 211, 102, 0.5); }
+        button { padding: 12px 20px; background-color: #25D366; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; transition: 0.3s; }
+        button:hover { background-color: #1ebe5d; }
+        #msg { color: #dc3545; font-size: 14px; margin-top: 15px; font-weight: bold; min-height: 20px;}
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h2>Akses Web WA</h2>
+        <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Masukkan Access Key Anda untuk melanjutkan.</p>
+        
+        <input type="text" id="accessKey" placeholder="KEY KAMU">
+        
+        <button id="btnLogin" onclick="login()">Masuk ke Dashboard</button>
+        <p id="msg"></p>
+    </div>
+
+    <script>
+        // Hapus sesi lama jika user balik ke halaman login
+        sessionStorage.clear();
+
+        async function login() {
+            const key = document.getElementById('accessKey').value;
+            const btn = document.getElementById('btnLogin');
+            const msgBox = document.getElementById('msg');
+            
+            if (!key) {
+                msgBox.innerText = "Key tidak boleh kosong!";
+                return;
+            }
+
+            btn.innerText = "Memeriksa...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    // PENTING: Simpan Key dan Nomor HP (phone) ke memori browser
+                    sessionStorage.setItem('auth_key', key);
+                    sessionStorage.setItem('user_phone', data.phone); 
+                    
+                    msgBox.style.color = "#28a745";
+                    msgBox.innerText = "Berhasil! Mengalihkan...";
+                    
+                    setTimeout(() => {
+                        window.location.href = '/dashboard.html';
+                    }, 500);
+                } else {
+                    msgBox.style.color = "#dc3545";
+                    msgBox.innerText = data.message;
+                    btn.innerText = "Masuk ke Dashboard";
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                msgBox.innerText = "Terjadi kesalahan server.";
+                btn.innerText = "Masuk ke Dashboard";
+                btn.disabled = false;
+            }
+        }
+
+        // Fitur tekan Enter untuk login
+        document.getElementById('accessKey').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+    </script>
+</body>
+</html>
