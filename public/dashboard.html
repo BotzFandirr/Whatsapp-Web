@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Web WA</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #ece5dd; padding: 20px; }
+        .container { background: white; padding: 30px; border-radius: 12px; max-width: 450px; margin: 0 auto; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #075e54; margin-bottom: 20px; }
+        
+        .info-box { padding: 20px; background-color: #f8f9fa; border-radius: 8px; border-left: 5px solid #25D366; margin-bottom: 20px; }
+        .info-box p { margin: 8px 0; font-size: 16px; font-weight: bold; color: #333; }
+        
+        .badge-aktif { color: #28a745; font-weight: bold; }
+        .badge-mati { color: #dc3545; font-weight: bold; }
+        
+        button { padding: 12px 20px; background-color: #25D366; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; transition: 0.3s;}
+        button:hover { background-color: #1ebe5d; }
+        .btn-danger { background-color: #dc3545; margin-top: 15px; }
+        .btn-danger:hover { background-color: #c82333; }
+
+        #pairingCode { font-size: 2.5em; font-weight: bold; letter-spacing: 5px; color: #075e54; margin: 20px 0; text-align: center; }
+        #features { display: none; margin-top: 20px; padding: 15px; background: #dcf8c6; border-radius: 8px; }
+        #logText { text-align: center; color: #666; font-style: italic; margin-top: 15px;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Dashboard Web WA</h2>
+        
+        <div class="info-box">
+            <p>📱 Nomor: <span id="displayPhone" style="color: #075e54;">Memuat...</span></p>
+            <p>📡 Status: <span id="statusBadge" class="badge-mati">Mati 🔴</span></p>
+        </div>
+
+        <div id="setup-section">
+            <button onclick="getPairingCode()">Sambungkan WhatsApp (Minta Kode)</button>
+        </div>
+
+        <div id="pairingCode" style="display: none;"></div>
+        <p id="logText">Menghubungkan ke server...</p>
+
+        <div id="features">
+            <h3 style="color: #075e54; text-align: center;">✅ Koneksi Terjalin!</h3>
+            <ul style="color: #333;">
+                <li>Bot Manajemen Grup (Aktif)</li>
+                <li>Auto Respon & Plugin (Aktif)</li>
+                <li>Fitur Anti-Link (Standby)</li>
+            </ul>
+            <button class="btn-danger" onclick="logoutWa()">Logout Sesi WA</button>
+        </div>
+    </div>
+
+    <script>
+        const authKey = sessionStorage.getItem('auth_key');
+        const userPhone = sessionStorage.getItem('user_phone'); // Diambil dari JSON via server
+
+        if (!authKey || !userPhone) {
+            window.location.href = '/'; // Tendang ke login jika tidak ada sesi
+        }
+
+        // Tampilkan nomor secara otomatis
+        document.getElementById('displayPhone').innerText = userPhone;
+        const socket = io();
+
+        // 1. Saat halaman dimuat, langsung periksa apakah nomor ini sudah pernah scan/pairing
+        socket.emit('check_status', userPhone);
+
+        // 2. Fungsi memanggil kode pairing
+        function getPairingCode() {
+            document.getElementById('logText').innerText = "Memproses permintaan kode pairing...";
+            document.getElementById('setup-section').style.display = 'none'; // Sembunyikan tombol agar tidak di-spam
+            socket.emit('start_wa', userPhone); 
+        }
+
+        // 3. Fungsi menghapus sesi (logout)
+        function logoutWa() {
+            if(confirm('Yakin ingin memutuskan koneksi WhatsApp perangkat ini?')) {
+                socket.emit('delete_session', userPhone);
+                setTimeout(() => window.location.reload(), 1500);
+            }
+        }
+
+        // --- SOCKET LISTENER (MENDENGAR BALASAN DARI SERVER) ---
+
+        socket.on('pairing_code', (code) => {
+            document.getElementById('logText').innerText = "Masukkan kode ini di notifikasi WhatsApp perangkat tautanmu:";
+            document.getElementById('pairingCode').style.display = 'block';
+            document.getElementById('pairingCode').innerText = code;
+        });
+
+        // JIKA STATUS AKTIF (CONNECTED)
+        socket.on('connected', (msg) => {
+            document.getElementById('statusBadge').className = 'badge-aktif';
+            document.getElementById('statusBadge').innerHTML = 'Aktif 🟢';
+            
+            document.getElementById('setup-section').style.display = 'none';
+            document.getElementById('pairingCode').style.display = 'none';
+            document.getElementById('logText').innerText = msg;
+            document.getElementById('features').style.display = 'block';
+        });
+
+        // JIKA STATUS MATI (DISCONNECTED)
+        socket.on('disconnected', (msg) => {
+            document.getElementById('statusBadge').className = 'badge-mati';
+            document.getElementById('statusBadge').innerHTML = 'Mati 🔴';
+            
+            document.getElementById('logText').innerText = msg;
+            document.getElementById('setup-section').style.display = 'block';
+            document.getElementById('features').style.display = 'none';
+        });
+
+        socket.on('log', (msg) => {
+            document.getElementById('logText').innerText = msg;
+        });
+    </script>
+</body>
+</html>
