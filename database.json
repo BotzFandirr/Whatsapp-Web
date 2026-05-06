@@ -1,10 +1,24 @@
 {
-  "KEY-112223333": {
-    "phone": "6283155619441",
-    "expired_at": "2026-12-31" 
-  },
-  "YANN-MOD": {
-    "phone": "6285693524391",
-    "expired_at": "2027-10-15"
-  }
+  "users": [
+    {
+      "id": "admin",
+      "username": "admin",
+      "password": "admin123",
+      "role": "admin",
+      "plan": "premium",
+      "premium_expires_at": "2099-12-31",
+      "created_at": "2026-05-06T00:00:00.000Z",
+      "message_usage": {}
+    },
+    {
+      "id": "demo-free",
+      "username": "demo",
+      "password": "demo123",
+      "role": "user",
+      "plan": "free",
+      "premium_expires_at": "",
+      "created_at": "2026-05-06T00:00:00.000Z",
+      "message_usage": {}
+    }
+  ]
 }

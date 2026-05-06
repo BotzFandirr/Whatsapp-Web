@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar - Web WA</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh; display: flex; justify-content: center; align-items: center; background: #f0f2f5; margin: 0; padding: 20px; }
+        .auth-card { background: white; padding: 34px; border-radius: 18px; box-shadow: 0 18px 45px rgba(0,0,0,0.12); width: 100%; max-width: 420px; }
+        h1 { color: #075e54; margin: 0 0 10px; text-align: center; }
+        p { color: #667085; text-align: center; margin: 0 0 24px; }
+        label { display: block; color: #344054; font-weight: 700; margin-bottom: 8px; }
+        input { width: 100%; padding: 13px 14px; margin-bottom: 16px; border: 1px solid #d0d5dd; border-radius: 10px; font-size: 15px; }
+        button { width: 100%; padding: 13px 16px; background-color: #25D366; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 800; }
+        a { display: block; color: #075e54; font-weight: 700; text-decoration: none; text-align: center; margin-top: 18px; }
+        #msg { color: #dc3545; font-size: 14px; margin-top: 15px; font-weight: bold; min-height: 20px; text-align: center; }
+        .note { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; padding: 12px; border-radius: 10px; margin-bottom: 18px; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <main class="auth-card">
+        <h1>Daftar Akun</h1>
+        <p>Akun baru otomatis menjadi pengguna free.</p>
+        <div class="note">Nomor WhatsApp tidak disimpan otomatis saat daftar. Masukkan nomor secara manual di dashboard saat ingin pairing.</div>
+
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="Minimal 3 karakter" autocomplete="username">
+
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Minimal 6 karakter" autocomplete="new-password">
+
+        <button id="btnRegister" onclick="register()">Daftar Akun Free</button>
+        <p id="msg"></p>
+        <a href="/">Sudah punya akun? Login</a>
+    </main>
+
+    <script>
+        async function register() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('btnRegister');
+            const msgBox = document.getElementById('msg');
+
+            btn.innerText = 'Mendaftarkan...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    msgBox.style.color = '#28a745';
+                    msgBox.innerText = data.message;
+                    setTimeout(() => window.location.href = '/', 900);
+                    return;
+                }
+
+                msgBox.style.color = '#dc3545';
+                msgBox.innerText = data.message;
+            } catch (err) {
+                msgBox.style.color = '#dc3545';
+                msgBox.innerText = 'Terjadi kesalahan server.';
+            }
+
+            btn.innerText = 'Daftar Akun Free';
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>

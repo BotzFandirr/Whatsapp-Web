@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Web WA</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1080px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 28px; box-shadow: 0 12px 30px rgba(0,0,0,.1); }
+        .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+        h1 { color: #075e54; margin: 0; }
+        p { color: #667085; }
+        table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 12px; }
+        th, td { padding: 12px; border-bottom: 1px solid #e4e7ec; text-align: left; vertical-align: middle; }
+        th { background: #075e54; color: #fff; }
+        tr:hover { background: #f9fafb; }
+        select, input { width: 100%; padding: 10px; border: 1px solid #d0d5dd; border-radius: 8px; }
+        button { padding: 10px 12px; background: #25D366; color: #fff; border: 0; border-radius: 8px; cursor: pointer; font-weight: 800; }
+        button:hover { background: #1ebe5d; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-secondary { background: #075e54; }
+        .btn-secondary:hover { background: #05483f; }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .badge { display: inline-block; padding: 5px 9px; border-radius: 999px; font-weight: 800; font-size: 12px; }
+        .premium { background: #ecfdf3; color: #067647; }
+        .free { background: #fff7ed; color: #9a3412; }
+        #msg { min-height: 24px; font-weight: 800; }
+        .mobile-card { display: none; }
+        @media (max-width: 760px) {
+            table { display: none; }
+            .mobile-card { display: block; border: 1px solid #e4e7ec; border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <div class="topbar">
+            <div>
+                <h1>Panel Admin Pengguna</h1>
+                <p>Kelola pengguna, ubah ke premium, dan atur masa aktif premium.</p>
+            </div>
+            <div class="actions">
+                <button class="btn-secondary" onclick="window.location.href='/dashboard.html'">Dashboard</button>
+                <button class="btn-danger" onclick="logoutApp()">Logout</button>
+            </div>
+        </div>
+
+        <p id="msg"></p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Status Paket</th>
+                    <th>Ubah Paket</th>
+                    <th>Masa Aktif Premium</th>
+                    <th>Pemakaian Hari Ini</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="userRows"></tbody>
+        </table>
+        <div id="mobileRows"></div>
+    </main>
+
+    <script>
+        const authKey = sessionStorage.getItem('auth_key');
+        const currentUser = JSON.parse(sessionStorage.getItem('user') || 'null');
+        const today = new Date().toISOString().slice(0, 10);
+
+        if (!authKey || !currentUser || currentUser.role !== 'admin') {
+            window.location.href = '/';
+        }
+
+        function headers() {
+            return { 'Content-Type': 'application/json', Authorization: `Bearer ${authKey}` };
+        }
+
+        function setMsg(message, ok = true) {
+            const msg = document.getElementById('msg');
+            msg.style.color = ok ? '#28a745' : '#dc3545';
+            msg.innerText = message;
+        }
+
+        function statusBadge(user) {
+            return `<span class="badge ${user.plan}">${user.plan.toUpperCase()}</span>`;
+        }
+
+        async function loadUsers() {
+            const res = await fetch('/api/admin/users', { headers: headers() });
+            const data = await res.json();
+            if (!data.success) {
+                setMsg(data.message || 'Gagal memuat pengguna.', false);
+                if (res.status === 401 || res.status === 403) logoutApp();
+                return;
+            }
+
+            document.getElementById('userRows').innerHTML = data.users.map((user) => `
+                <tr>
+                    <td><strong>${user.username}</strong></td>
+                    <td>
+                        <select id="role-${user.id}" ${user.id === currentUser.id ? 'disabled' : ''}>
+                            <option value="user" ${user.role === 'user' ? 'selected' : ''}>user</option>
+                            <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>admin</option>
+                        </select>
+                    </td>
+                    <td>${statusBadge(user)}</td>
+                    <td>
+                        <select id="plan-${user.id}">
+                            <option value="free" ${user.plan === 'free' ? 'selected' : ''}>free</option>
+                            <option value="premium" ${user.plan === 'premium' ? 'selected' : ''}>premium</option>
+                        </select>
+                    </td>
+                    <td><input id="expires-${user.id}" type="date" value="${user.premium_expires_at || ''}"></td>
+                    <td>${(user.message_usage || {})[today] || 0} pesan</td>
+                    <td>
+                        <div class="actions">
+                            <button onclick="saveUser('${user.id}')">Simpan</button>
+                            <button class="btn-danger" onclick="deleteUser('${user.id}')" ${user.id === currentUser.id ? 'disabled' : ''}>Hapus</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            document.getElementById('mobileRows').innerHTML = data.users.map((user) => `
+                <div class="mobile-card">
+                    <p><strong>${user.username}</strong> ${statusBadge(user)}</p>
+                    <label>Role</label>
+                    <select id="m-role-${user.id}" ${user.id === currentUser.id ? 'disabled' : ''}>
+                        <option value="user" ${user.role === 'user' ? 'selected' : ''}>user</option>
+                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>admin</option>
+                    </select>
+                    <label>Paket</label>
+                    <select id="m-plan-${user.id}">
+                        <option value="free" ${user.plan === 'free' ? 'selected' : ''}>free</option>
+                        <option value="premium" ${user.plan === 'premium' ? 'selected' : ''}>premium</option>
+                    </select>
+                    <label>Masa Aktif</label>
+                    <input id="m-expires-${user.id}" type="date" value="${user.premium_expires_at || ''}">
+                    <p>Pemakaian hari ini: ${(user.message_usage || {})[today] || 0} pesan</p>
+                    <div class="actions">
+                        <button onclick="saveUser('${user.id}', true)">Simpan</button>
+                        <button class="btn-danger" onclick="deleteUser('${user.id}')" ${user.id === currentUser.id ? 'disabled' : ''}>Hapus</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function saveUser(id, mobile = false) {
+            const prefix = mobile ? 'm-' : '';
+            const body = {
+                role: document.getElementById(`${prefix}role-${id}`).value,
+                plan: document.getElementById(`${prefix}plan-${id}`).value,
+                premium_expires_at: document.getElementById(`${prefix}expires-${id}`).value
+            };
+
+            if (body.plan === 'premium' && !body.premium_expires_at) {
+                setMsg('Isi masa aktif premium terlebih dahulu.', false);
+                return;
+            }
+
+            const res = await fetch(`/api/admin/users/${id}`, {
+                method: 'PATCH',
+                headers: headers(),
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            setMsg(data.message, data.success);
+            await loadUsers();
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('Yakin ingin menghapus pengguna ini?')) return;
+
+            const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE', headers: headers() });
+            const data = await res.json();
+            setMsg(data.message, data.success);
+            await loadUsers();
+        }
+
+        function logoutApp() {
+            sessionStorage.clear();
+            window.location.href = '/';
+        }
+
+        loadUsers();
+    </script>
+</body>
+</html>
